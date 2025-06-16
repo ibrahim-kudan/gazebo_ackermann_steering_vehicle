@@ -4,6 +4,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
+#include "geometry_msgs/msg/twist.hpp"
 
 class VehicleController : public rclcpp::Node
 {
@@ -91,6 +92,11 @@ private:
    */
   void update_velocity(double v);
 
+  /**
+   * Updates the vehicle velocity and steering angle based on a Twist message.
+   */
+  void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg);
+
   double timeout_duration_;
   rclcpp::Time last_velocity_time_;
   rclcpp::Time last_steering_time_;
@@ -112,9 +118,10 @@ private:
 
   rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr steering_angle_subscriber_;
   rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr velocity_subscriber_;
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscriber_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr position_publisher_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr velocity_publisher_;
   rclcpp::TimerBase::SharedPtr timer_;
 };
 
-#endif  // VEHICLE_CONTROLLER_HPP
+#endif // VEHICLE_CONTROLLER_HPP

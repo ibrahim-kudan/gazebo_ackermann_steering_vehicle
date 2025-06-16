@@ -10,14 +10,15 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 include_directories(include)
 
 add_executable(vehicle_controller src/vehicle_controller.cpp)
-ament_target_dependencies(vehicle_controller rclcpp std_msgs)
+ament_target_dependencies(vehicle_controller rclcpp std_msgs geometry_msgs)
 
 add_executable(joystick_controller src/joystick_controller.cpp)
-ament_target_dependencies(joystick_controller rclcpp std_msgs sensor_msgs)
+ament_target_dependencies(joystick_controller rclcpp std_msgs sensor_msgs geometry_msgs)
 
 install(
   DIRECTORY launch model config

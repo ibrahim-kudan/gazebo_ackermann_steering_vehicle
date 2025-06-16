@@ -44,6 +44,7 @@ VehicleController::VehicleController(const double timer_period, const double tim
 
   velocity_subscriber_ = create_subscription<std_msgs::msg::Float64>(
       "/velocity", 10, std::bind(&VehicleController::velocity_callback, this, std::placeholders::_1));
+  cmd_vel_subscriber_ = create_subscription<geometry_msgs::msg::Twist>("/cmd_vel", 10, std::bind(&VehicleController::cmd_vel_callback, this, std::placeholders::_1));
 
   // Publishers
   position_publisher_ = create_publisher<std_msgs::msg::Float64MultiArray>(
@@ -219,6 +220,24 @@ void VehicleController::update_velocity(double v)
   // Convert wheel linear velocity to wheel angular velocity
   wheel_angular_velocity_ = {(wheel_velocity.first / wheel_radius_),
                              (wheel_velocity.second / wheel_radius_)};
+}
+
+void VehicleController::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
+{
+  const double v = msg->linear.x;
+  const double w = msg->angular.z;
+  update_velocity(v);
+  if (w == 0)
+  {
+    update_steering_angle(0);
+  }
+  else
+  {
+    const double r = v / w;
+    const double steering_angle = atan(wheel_base_ / r);
+    RCLCPP_INFO(get_logger(), "New steering anlgle %f, r%f, wheel_base:%f, w:%f", steering_angle, r, wheel_base_, w);
+    update_steering_angle(steering_angle);
+  }
 }
 
 int main(int argc, char **argv)
