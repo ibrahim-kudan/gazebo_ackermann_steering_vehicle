@@ -62,6 +62,9 @@
   <xacro:property name="max_wheel_angular_velocity" value="${max_velocity / wheel_radius}"/>
 
   <!-- Links -->
+  <xacro:include filename="inertial_macros.xacro" />
+  <xacro:include filename="laser.xacro" />
+  <xacro:include filename="lidar.xacro" />
 
   <!-- Body Link -->
   <link name="body_link">
