@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
    <joint name="lidar_joint" type="fixed">
-     <parent link="body_link"/>
+     <parent link="camera_stick_link"/>
      <child link="lidar_frame"/>
-     <origin xyz="0.1 0 0.1" rpy="0 0 0"/>
+     <origin xyz="0.0 0 0.1" rpy="0 0 0"/>
    </joint>
    <link name="lidar_frame">
       <visual>

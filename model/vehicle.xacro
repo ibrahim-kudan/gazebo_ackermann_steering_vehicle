@@ -3,21 +3,21 @@
 <robot name="ackermann_steering_vehicle" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
   <!-- Arguments -->
-  <xacro:arg name="body_length" default="2.0" />
-  <xacro:arg name="body_width" default="1.0" />
-  <xacro:arg name="body_height" default="0.5" />
+  <xacro:arg name="body_length" default="0.9" />
+  <xacro:arg name="body_width" default="0.3" />
+  <xacro:arg name="body_height" default="0.1" />
   <xacro:arg name="body_density" default="1000.0" />
-  <xacro:arg name="wheel_radius" default="0.3" />
-  <xacro:arg name="wheel_width" default="0.1" />
+  <xacro:arg name="wheel_radius" default="0.04" />
+  <xacro:arg name="wheel_width" default="0.02" />
   <xacro:arg name="wheel_density" default="1000.0" />
   <xacro:arg name="max_steering_angle" default="0.6108" />
   <xacro:arg name="max_steering_angular_velocity" default="1.570796" />
   <xacro:arg name="max_steering_effort" default="1.0" />
   <xacro:arg name="max_velocity" default="1.0" />
   <xacro:arg name="max_effort" default="10.0" />
-  <xacro:arg name="camera_box_size" default="0.1" />
-  <xacro:arg name="camera_stick_size" default="0.2" />
-  <xacro:arg name="camera_height" default="1.5" />
+  <xacro:arg name="camera_box_size" default="0.05" />
+  <xacro:arg name="camera_stick_size" default="0.02" />
+  <xacro:arg name="camera_height" default="0.5" />
   <xacro:arg name="camera_pitch" default="0.1" />
   <xacro:arg name="camera_fov" default="90" />
   <xacro:arg name="camera_fps" default="30" />
@@ -353,7 +353,7 @@
   <!-- Camera Stick Joint -->
   <joint name="camera_stick_joint" type="fixed">
     <axis xyz="0 1 0" />
-    <origin xyz="${body_length/2 - camera_stick_size/2} ${camera_box_size/2 + camera_stick_size/2} ${camera_height/2}" rpy="0.0 0.0 0.0"/>
+    <origin xyz="0 ${camera_box_size/2 + camera_stick_size/2} ${camera_height/2}" rpy="0.0 0.0 0.0"/>
     <parent link="body_link"/>
     <child link="camera_stick_link"/>
   </joint>

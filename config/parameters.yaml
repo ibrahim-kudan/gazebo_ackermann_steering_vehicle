@@ -1,9 +1,9 @@
 /**:
   ros__parameters:
     # Body params
-    body_length: 0.3 # Length of the vehicle's body [m]
-    body_width: 0.18 # Width of the vehicle's body [m]
-    body_height: 0.05 # Height of the vehicle's body [m]
+    body_length: 0.9 # Length of the vehicle's body [m]
+    body_width: 0.3 # Width of the vehicle's body [m]
+    body_height: 0.1 # Height of the vehicle's body [m]
     body_density: 7850.0 # Density of the vehicle's body material, e.g., steel [kg/m^3]
 
     # Wheel params
@@ -21,7 +21,7 @@
     # Camera and image params
     camera_box_size: 0.05 # Size of the camera enclosure [m]
     camera_stick_size: 0.02 # Size of the camera stick [m]
-    camera_height: 0.2 # Height of the camera above the body_link [m]
+    camera_height: 0.5 # Height of the camera above the body_link [m]
     camera_pitch: 0.698131 # Pitch angle of the camera relative to body_link [rad]
     camera_fov: 1.3962634 # Field of view of the camera [rad]
     camera_fps: 30 # Frames per second for camera capture [Hz]
