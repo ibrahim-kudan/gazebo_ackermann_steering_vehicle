@@ -24,6 +24,8 @@ VehicleController::VehicleController(const double timer_period, const double tim
   declare_parameter<double>("wheel_width", 0.0);
   declare_parameter<double>("max_steering_angle", 0.0);
   declare_parameter<double>("max_velocity", 0.0);
+  declare_parameter<std::string>("robot_base_frame", "body_link");
+  declare_parameter<std::string>("odom_frame", "odom");
 
   // Get parameters on startup
   get_parameter("body_width", body_width_);
@@ -32,6 +34,8 @@ VehicleController::VehicleController(const double timer_period, const double tim
   get_parameter("wheel_width", wheel_width_);
   get_parameter("max_steering_angle", max_steering_angle_);
   get_parameter("max_velocity", max_velocity_);
+  get_parameter("robot_base_frame", robot_frame_id_);
+  get_parameter("odom_frame", odom_frame_id_);
 
   // Set the track width and wheel base
   track_width_ = body_width_ + (2 * wheel_width_ / 2);
@@ -41,10 +45,10 @@ VehicleController::VehicleController(const double timer_period, const double tim
   steering_angle_subscriber_ = create_subscription<std_msgs::msg::Float64>(
       "/steering_angle", 10,
       std::bind(&VehicleController::steering_angle_callback, this, std::placeholders::_1));
-
   velocity_subscriber_ = create_subscription<std_msgs::msg::Float64>(
       "/velocity", 10, std::bind(&VehicleController::velocity_callback, this, std::placeholders::_1));
   cmd_vel_subscriber_ = create_subscription<geometry_msgs::msg::Twist>("/cmd_vel", 10, std::bind(&VehicleController::cmd_vel_callback, this, std::placeholders::_1));
+  joint_state_subscriber_ = create_subscription<sensor_msgs::msg::JointState>("/joint_states", 10, std::bind(&VehicleController::compute_odom, this, std::placeholders::_1));
 
   // Publishers
   position_publisher_ = create_publisher<std_msgs::msg::Float64MultiArray>(
@@ -52,6 +56,8 @@ VehicleController::VehicleController(const double timer_period, const double tim
 
   velocity_publisher_ = create_publisher<std_msgs::msg::Float64MultiArray>(
       "/forward_velocity_controller/commands", 10);
+  odom_publisher_ = create_publisher<nav_msgs::msg::Odometry>("/odom", 10);
+  tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
   // Timer loop
   timer_ = create_wall_timer(std::chrono::duration<double>(timer_period),
@@ -238,6 +244,86 @@ void VehicleController::cmd_vel_callback(const geometry_msgs::msg::Twist::Shared
     RCLCPP_INFO(get_logger(), "New steering anlgle %f, r%f, wheel_base:%f, w:%f", steering_angle, r, wheel_base_, w);
     update_steering_angle(steering_angle);
   }
+}
+
+void VehicleController::compute_odom(const sensor_msgs::msg::JointState joints_state)
+{
+  if (last_joint_state_time_.seconds() == 0)
+  {
+    last_joint_state_time_ = joints_state.header.stamp;
+    return;
+  }
+  if (joints_state.name.empty())
+  {
+    return;
+  }
+
+  nav_msgs::msg::Odometry odom_msg;
+  odom_msg.header.frame_id = odom_frame_id_;
+  odom_msg.child_frame_id = robot_frame_id_;
+  odom_msg.header.stamp = joints_state.header.stamp;
+
+  geometry_msgs::msg::TransformStamped tf_msg;
+  tf_msg.header.frame_id = odom_frame_id_;
+  tf_msg.child_frame_id = robot_frame_id_;
+  tf_msg.header.stamp = joints_state.header.stamp;
+
+  const double dt = (rclcpp::Time(joints_state.header.stamp) - last_joint_state_time_).seconds();
+  auto find_joint_index = [&joints_state](const std::string &joint_name)
+  {
+    auto id = std::find(joints_state.name.begin(), joints_state.name.end(), joint_name) - joints_state.name.begin();
+    if (id >= joints_state.name.size())
+    {
+      throw std::runtime_error("Couldn't find joint " + joint_name);
+    }
+    return id;
+  };
+
+  size_t front_left__wheel_idx, front_right_wheel_idx, front_left_steering_idx, front_right_steering_idx;
+  try
+  {
+    front_left__wheel_idx = find_joint_index("rear_left_wheel_joint");
+    front_right_wheel_idx = find_joint_index("rear_right_wheel_joint");
+    front_left_steering_idx = find_joint_index("front_left_steering_joint");
+    front_right_steering_idx = find_joint_index("front_right_steering_joint");
+  }
+  catch (const std::runtime_error &error)
+  {
+    std::string available_joints = "";
+    for (const auto &joint : joints_state.name)
+    {
+      available_joints += joint + ",";
+    }
+    RCLCPP_ERROR(get_logger(), "Couldn't find the required joints %s. Available joints are %s . no odom will be calculated", error.what(), available_joints.c_str());
+    return;
+  }
+
+  const double avg_velocity = (joints_state.velocity[front_left__wheel_idx] + joints_state.velocity[front_right_wheel_idx] / 2.0) * wheel_radius_;
+  const double avg_steering_angle = joints_state.position[front_left_steering_idx] + joints_state.position[front_right_steering_idx] / 2.0;
+  const double angular_velocity = avg_velocity * tan(avg_steering_angle) / wheel_base_;
+
+  yaw_ += angular_velocity * dt;
+  x_ += avg_velocity * cos(yaw_) * dt;
+  y_ += avg_velocity * sin(yaw_) * dt;
+
+  odom_msg.twist.twist.linear.x = avg_velocity;
+  odom_msg.twist.twist.angular.z = angular_velocity;
+
+  odom_msg.pose.pose.position.x = x_;
+  odom_msg.pose.pose.position.y = y_;
+  odom_msg.pose.pose.orientation.z = sin(yaw_ / 2.0);
+  odom_msg.pose.pose.orientation.w = cos(yaw_ / 2.0);
+
+  RCLCPP_DEBUG(get_logger(), "Avg velocity %f  avg_angle:%f", avg_velocity, avg_steering_angle);
+  odom_publisher_->publish(odom_msg);
+
+  tf_msg.transform.translation.x = x_;
+  tf_msg.transform.translation.y = y_;
+  tf_msg.transform.translation.z = 0.0;
+  tf_msg.transform.rotation = odom_msg.pose.pose.orientation;
+  tf_broadcaster_->sendTransform(tf_msg);
+
+  last_joint_state_time_ = joints_state.header.stamp;
 }
 
 int main(int argc, char **argv)

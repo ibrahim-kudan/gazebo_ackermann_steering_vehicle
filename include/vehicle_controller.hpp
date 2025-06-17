@@ -5,6 +5,11 @@
 #include "std_msgs/msg/float64.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "nav_msgs/msg/odometry.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
+#include "tf2_ros/transform_broadcaster.h"
+#include "geometry_msgs/msg/transform_stamped.hpp"
+#include <algorithm>
 
 class VehicleController : public rclcpp::Node
 {
@@ -97,9 +102,15 @@ private:
    */
   void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg);
 
+  /**
+   * Compute and publish odom data based on the joint states.
+   */
+  void compute_odom(const sensor_msgs::msg::JointState joints_state);
+
   double timeout_duration_;
   rclcpp::Time last_velocity_time_;
   rclcpp::Time last_steering_time_;
+  rclcpp::Time last_joint_state_time_;
 
   double body_width_;
   double body_length_;
@@ -109,9 +120,14 @@ private:
   double max_velocity_;
   double wheel_base_;
   double track_width_;
+  std::string robot_frame_id_;
+  std::string odom_frame_id_;
 
   double steering_angle_;
   double velocity_;
+
+  // Odom data
+  double x_, y_, yaw_ = 0.0;
 
   std::vector<double> wheel_angular_velocity_;
   std::vector<double> wheel_steering_angle_;
@@ -119,9 +135,15 @@ private:
   rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr steering_angle_subscriber_;
   rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr velocity_subscriber_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscriber_;
+  rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_subscriber_;
+
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr position_publisher_;
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr velocity_publisher_;
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher_;
   rclcpp::TimerBase::SharedPtr timer_;
+
+  // Declare the transforms broadcaster
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 };
 
 #endif // VEHICLE_CONTROLLER_HPP
